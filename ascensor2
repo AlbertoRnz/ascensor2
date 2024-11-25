@@ -1,0 +1,199 @@
+import java.util.Scanner;
+
+public class pruebaNecesaria {
+    private static final int INSPECTION_THRESHOLD = 15;
+    private static final int INSPECTION_COST = 150;
+
+    private static int[] floors = {0, 0, 0};
+    private static int[] travels = {0, 0, 0};
+    private static int[] upDownCounts = {0, 0};
+    private static int[] floorsTraveled = {0, 0, 0};
+    private static int inspectionCostTotal = 0;
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        boolean running = true;
+
+        while (running) {
+            showMenu();
+            String choice = sc.nextLine().toUpperCase();
+
+            switch (choice) {
+                case "A":
+                    useElevator(sc);
+                    break;
+                case "B":
+                    showStatistics();
+                    break;
+                case "C":
+                    performInspection(sc);
+                    break;
+                case "X":
+                    System.out.println("Hasta la próxima! Espero que haya disfrutado de nuestros servicios.");
+                    running = false;
+                    break;
+                default:
+                    System.out.println("ERROR: La opción indicada no se encuentra entre las disponibles. Pruebe de nuevo.");
+            }
+        }
+    }
+
+    private static void showMenu() {
+        System.out.println("Elige la opción que consideres más conveniente:");
+        System.out.println("A - Usar Ascensor | B - Estadísticas Ascensor | C - Realizar la Inspección | X - Salir");
+        System.out.println("Tu opción:");
+
+    }
+
+    private static void useElevator(Scanner sc) {
+        System.out.println("Bienvenido al ascensor.");
+        System.out.println("A = Ático");
+        System.out.println("5 = Quinto");
+        System.out.println("4 = Cuarto");
+        System.out.println("3 = Tercero");
+        System.out.println("2 = Segundo");
+        System.out.println("1 = Primero");
+        System.out.println("G = Bajo");
+        System.out.println("B = Sótano");
+        System.out.println("Introduzca su planta origen: ");
+
+        int origin = readFloor(sc, "origen");
+        System.out.println("Introduzca su planta destino: ");
+        int destination = readFloor(sc, "destino");
+
+        if (origin == destination) {
+            System.out.println("ERROR: Ya se encuentra en la planta " + floorLabel(origin));
+            return;
+        }
+
+        int chosenElevator = chooseElevator(origin);
+
+        System.out.println("El ascensor " + elevatorName(chosenElevator) + " ha sido asignado.");
+        moveElevator(floors[chosenElevator], origin, "al origen");
+        moveElevator(origin, destination, "al destino");
+
+        travels[chosenElevator]++;
+        floorsTraveled[chosenElevator] += Math.abs(destination - origin);
+        if (destination > origin) {
+            upDownCounts[0]++;
+        } else {
+            upDownCounts[1]++;
+        }
+        floors[chosenElevator] = destination;
+    }
+
+    private static int readFloor(Scanner sc, String prompt) {
+        while (true) {
+            System.out.print("Planta " + prompt + ": ");
+            String input = sc.nextLine().toUpperCase();
+            switch (input) {
+                case "A": return 8;
+                case "G": return 0;
+                case "B": return -1;
+                default:
+                    try {
+                        int floor = Integer.parseInt(input);
+                        if (floor >= 1 && floor <= 7) {
+                            return floor;
+                        }
+                    } catch (NumberFormatException ignored) {}
+            }
+            System.out.println("Entrada no válida. Intente nuevamente.");
+        }
+    }
+
+    private static int chooseElevator(int userFloor) {
+        int minDistance = Integer.MAX_VALUE;
+        int bestElevator = -1;
+
+        for (int i = 0; i < floors.length; i++) {
+            int distance = Math.abs(floors[i] - userFloor);
+            if (distance < minDistance || (distance == minDistance && travels[i] < travels[bestElevator])) {
+                minDistance = distance;
+                bestElevator = i;
+            }
+        }
+        return bestElevator;
+    }
+
+    private static void moveElevator(int from, int to, String context) {
+        if (from == to) return;
+        System.out.print("Moviéndose " + context + ": ");
+        if (from < to) {
+            for (int i = from; i <= to; i++) {
+                System.out.print(floorLabel(i) + "..");
+            }
+        } else {
+            for (int i = from; i >= to; i--) {
+                System.out.print(floorLabel(i) + "..");
+            }
+        }
+        System.out.println();
+    }
+
+    private static String floorLabel(int floor) {
+        switch (floor) {
+            case 6: return "A";
+            case 0: return "G";
+            case -1: return "B";
+            default: return String.valueOf(floor);
+        }
+    }
+
+    private static String elevatorName(int index) {
+        switch (index) {
+            case 0: return "Alpha";
+            case 1: return "Beta";
+            case 2: return "Gamma";
+            default: return "Unknown";
+        }
+    }
+
+    private static void showStatistics() {
+        System.out.println("\n--- ESTADÍSTICAS DE LOS ASCENSORES ---");
+        for (int i = 0; i < floors.length; i++) {
+            System.out.printf("Ascensor %s: %d viajes (%d subidas, %d bajadas), %d plantas recorridas%n",
+                    elevatorName(i), travels[i], upDownCounts[0], upDownCounts[1], floorsTraveled[i]);
+        }
+    }
+
+    private static void performInspection(Scanner sc) {
+        System.out.println("\n--- INSPECCIÓN DE ASCENSORES ---");
+        boolean needsInspection = false;
+
+        for (int i = 0; i < floors.length; i++) {
+            if (floorsTraveled[i] > INSPECTION_THRESHOLD) {
+                needsInspection = true;
+                System.out.printf("El ascensor %s necesita inspección (plantas recorridas: %d).%n",
+                        elevatorName(i), floorsTraveled[i]);
+            }
+        }
+
+        if (!needsInspection) {
+            System.out.printf("Ningún ascensor necesita inspección. Gasto acumulado: %d euros.%n", inspectionCostTotal);
+            return;
+        }
+
+        System.out.print("¿Desea realizar la inspección? (Y/N): ");
+        while (true) {
+            String input = sc.nextLine().toUpperCase();
+            if (input.equals("Y")) {
+                for (int i = 0; i < floors.length; i++) {
+                    if (floorsTraveled[i] > INSPECTION_THRESHOLD) {
+                        int cost = (floorsTraveled[i] / INSPECTION_THRESHOLD) * INSPECTION_COST;
+                        inspectionCostTotal += cost;
+                        System.out.printf("Inspección realizada en %s: %d euros.%n", elevatorName(i), cost);
+                        floorsTraveled[i] = 0;
+                    }
+                }
+                System.out.printf("Gasto acumulado total: %d euros.%n", inspectionCostTotal);
+                break;
+            } else if (input.equals("N")) {
+                System.out.printf("Inspección cancelada. Gasto acumulado total: %d euros.%n", inspectionCostTotal);
+                break;
+            } else {
+                System.out.print("Entrada no válida. Responda con Y o N: ");
+            }
+        }
+    }
+}
